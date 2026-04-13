@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BB Motorpool — Key Monitoring System v2.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --maroon:       #7B1C1C;
+    --maroon-dark:  #5A1313;
+    --maroon-light: #9E2828;
+    --maroon-pale:  #F8EFEF;
+    --maroon-mid:   #C0524A;
+    --gold:         #D4A017;
+    --white:        #FFFFFF;
+    --gray-50:      #F9F9F9;
+    --gray-100:     #F0EEEE;
+    --gray-200:     #DDD9D9;
+    --gray-400:     #9A9090;
+    --gray-600:     #5C5454;
+    --gray-800:     #2E2929;
+    --green:        #1A7A4A;
+    --green-bg:     #EAF5EE;
+    --red:          #C0332B;
+    --red-bg:       #FDECEA;
+    --orange:       #C06010;
+    --orange-bg:    #FEF3E8;
+    --blue:         #1A5A9A;
+    --blue-bg:      #EAF0FA;
+    --radius:       8px;
+    --radius-lg:    12px;
+    --shadow:       0 2px 8px rgba(123,28,28,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-800);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--maroon);
+    color: white;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo-badge {
+    background: var(--gold);
+    color: var(--maroon-dark);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+  header h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.3px;
+  }
+  header h1 span { font-weight: 400; opacity: 0.75; font-size: 14px; margin-left: 8px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .sync-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    opacity: 0.85;
+    background: rgba(255,255,255,0.12);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .sync-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #4CAF50;
+    animation: pulse 2s infinite;
+  }
+  .sync-dot.syncing { background: var(--gold); animation: spin-pulse 1s infinite; }
+  .sync-dot.error { background: #EF5350; animation: none; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes spin-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── ALERTS BAR ── */
+  #alertBar {
+    display: none;
+    background: #FFF3CD;
+    border-bottom: 2px solid var(--orange);
+    padding: 8px 24px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--orange);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #alertBar.hidden { display: none !important; }
+  .alert-icon { font-size: 16px; }
+
+  /* ── NAV TABS ── */
+  .nav-tabs {
+    background: var(--maroon-dark);
+    display: flex;
+    padding: 0 24px;
+    gap: 2px;
+  }
+  .nav-tab {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.5px;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    user-select: none;
+  }
+  .nav-tab:hover { color: rgba(255,255,255,0.9); }
+  .nav-tab.active { color: white; border-bottom-color: var(--gold); }
+
+  /* ── MAIN ── */
+  main { padding: 24px; max-width: 1280px; margin: 0 auto; }
+
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── STAT CARDS ── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow);
+  }
+  .stat-card .label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--gray-400);
+    margin-bottom: 6px;
+  }
+  .stat-card .value {
+    font-size: 28px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .stat-card.maroon  { border-top: 3px solid var(--maroon); }
+  .stat-card.maroon .value { color: var(--maroon); }
+  .stat-card.green   { border-top: 3px solid var(--green); }
+  .stat-card.green .value { color: var(--green); }
+  .stat-card.red     { border-top: 3px solid var(--red); }
+  .stat-card.red .value { color: var(--red); }
+  .stat-card.orange  { border-top: 3px solid var(--orange); }
+  .stat-card.orange .value { color: var(--orange); }
+
+  /* ── KEY CARDS GRID ── */
+  .keys-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .key-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .key-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(123,28,28,0.12); }
+  .key-card-header {
+    background: var(--maroon-pale);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .key-unit {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--maroon);
+  }
+  .key-desc { font-size: 12px; color: var(--gray-600); margin-top: 1px; }
+  .avail-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .avail-badge.available { background: var(--green-bg); color: var(--green); }
+  .avail-badge.out { background: var(--red-bg); color: var(--red); }
+  .avail-badge.partial { background: var(--orange-bg); color: var(--orange); }
+  .key-card-body { padding: 12px 16px; }
+  .key-copies { font-size: 12px; color: var(--gray-600); margin-bottom: 10px; }
+  .key-copies strong { color: var(--gray-800); }
+  .key-actions { display: flex; gap: 8px; }
+  .btn-issue {
+    flex: 1;
+    background: var(--maroon);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Barlow', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-issue:hover { background: var(--maroon-dark); }
+  .btn-issue:disabled { background: var(--gray-200); color: var(--gray-400); cursor: not-allowed; }
+  .btn-view {
+    background: white;
+    color: var(--maroon);
+    border: 1px solid var(--maroon);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Barlow', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-view:hover { background: var(--maroon-pale); }
+
+  /* ── ACTIVE ISSUES TABLE ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--maroon);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .table-wrap {
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table th {
+    background: var(--maroon);
+    color: white;
+    padding: 10px 14px;
+    text-align: left;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+  }
+  table tr:last-child td { border-bottom: none; }
+  table tr:hover td { background: var(--maroon-pale); }
+  .status-pill {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .status-pill.out      { background: var(--red-bg); color: var(--red); }
+  .status-pill.overdue  { background: #FFF3CD; color: var(--orange); border: 1px solid var(--orange); }
+  .status-pill.returned { background: var(--green-bg); color: var(--green); }
+  .btn-return {
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Barlow', sans-serif;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .btn-return:hover { background: #155C38; }
+
+  /* ── MODALS ── */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: white;
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 480px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .modal-header {
+    background: var(--maroon);
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    opacity: 0.8;
+  }
+  .modal-close:hover { opacity: 1; }
+  .modal-body { padding: 20px; }
+  .form-row { margin-bottom: 14px; }
+  .form-row label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gray-600);
+    margin-bottom: 5px;
+  }
+  .form-row input, .form-row select, .form-row textarea {
+    width: 100%;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 9px 12px;
+    font-size: 14px;
+    font-family: 'Barlow', sans-serif;
+    color: var(--gray-800);
+    transition: border-color 0.15s;
+    background: white;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+    outline: none;
+    border-color: var(--maroon);
+    box-shadow: 0 0 0 3px rgba(123,28,28,0.1);
+  }
+  .form-row textarea { resize: vertical; min-height: 70px; }
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer {
+    padding: 14px 20px;
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-100);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .btn-cancel {
+    background: white;
+    color: var(--gray-600);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Barlow', sans-serif;
+  }
+  .btn-cancel:hover { background: var(--gray-100); }
+  .btn-submit {
+    background: var(--maroon);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 9px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Barlow', sans-serif;
+    transition: background 0.15s;
+  }
+  .btn-submit:hover { background: var(--maroon-dark); }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* ── ADD KEY BTN ── */
+  .btn-add-key {
+    background: var(--maroon);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Barlow', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s;
+  }
+  .btn-add-key:hover { background: var(--maroon-dark); }
+
+  /* ── SEARCH / FILTER ── */
+  .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .search-input {
+    flex: 1;
+    min-width: 200px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 8px 14px;
+    font-size: 13px;
+    font-family: 'Barlow', sans-serif;
+  }
+  .search-input:focus { outline: none; border-color: var(--maroon); }
+  .filter-select {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: 'Barlow', sans-serif;
+    background: white;
+    color: var(--gray-800);
+  }
+  .filter-select:focus { outline: none; border-color: var(--maroon); }
+
+  /* ── SETUP PAGE ── */
+  .setup-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    padding: 28px;
+    max-width: 640px;
+    box-shadow: var(--shadow);
+  }
+  .setup-card h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--maroon);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .setup-card p { font-size: 14px; color: var(--gray-600); margin-bottom: 20px; line-height: 1.6; }
+  .gas-steps {
+    background: var(--maroon-pale);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--gray-800);
+    border-left: 4px solid var(--maroon);
+  }
+  .gas-steps ol { padding-left: 18px; }
+  .gas-steps code {
+    background: rgba(123,28,28,0.1);
+    color: var(--maroon-dark);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  .url-input-wrap { display: flex; gap: 8px; }
+  .url-input-wrap input { flex: 1; }
+  .btn-connect {
+    background: var(--maroon);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Barlow', sans-serif;
+    white-space: nowrap;
+  }
+  .btn-connect:hover { background: var(--maroon-dark); }
+  .connection-status {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    display: none;
+  }
+  .connection-status.ok { background: var(--green-bg); color: var(--green); display: block; }
+  .connection-status.err { background: var(--red-bg); color: var(--red); display: block; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--gray-400);
+  }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* ── TOAST ── */
+  #toastContainer {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    background: var(--maroon-dark);
+    color: white;
+    padding: 12px 18px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    animation: slideIn 0.25s ease;
+    max-width: 320px;
+  }
+  .toast.success { background: var(--green); }
+  .toast.error   { background: var(--red); }
+  .toast.warning { background: var(--orange); }
+  @keyframes slideIn { from{ transform: translateX(100%); opacity:0; } to{ transform:translateX(0); opacity:1; } }
+
+  /* ── OVERDUE BADGE ── */
+  .overdue-count {
+    background: var(--orange);
+    color: white;
+    border-radius: 20px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-left: 6px;
+  }
+
+  /* ── LOG TABLE RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .form-grid-2 { grid-template-columns: 1fr; }
+    table { font-size: 12px; }
+    table th, table td { padding: 8px 10px; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    main { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <div class="logo-badge">BB</div>
+    <h1>Key Monitoring System <span>v2.0 · Motorpool</span></h1>
+  </div>
+  <div class="header-right">
+    <div class="sync-indicator" id="syncIndicator">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncText">Syncing...</span>
+    </div>
+  </div>
+</header>
+
+<!-- ALERT BAR -->
+<div id="alertBar" class="hidden">
+  <span class="alert-icon">⚠</span>
+  <span id="alertText">Loading...</span>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <div class="nav-tab active" data-page="dashboard">Dashboard</div>
+  <div class="nav-tab" data-page="keys">Keys</div>
+  <div class="nav-tab" data-page="active">Active Issues</div>
+  <div class="nav-tab" data-page="history">Log History</div>
+  <div class="nav-tab" data-page="setup">⚙ Setup</div>
+</div>
+
+<main>
+
+  <!-- ── DASHBOARD PAGE ── -->
+  <div id="page-dashboard" class="page active">
+    <div class="stat-grid">
+      <div class="stat-card maroon">
+        <div class="label">Total Keys</div>
+        <div class="value" id="stat-total">—</div>
+      </div>
+      <div class="stat-card green">
+        <div class="label">Available</div>
+        <div class="value" id="stat-available">—</div>
+      </div>
+      <div class="stat-card red">
+        <div class="label">Currently Out</div>
+        <div class="value" id="stat-out">—</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="label">Overdue</div>
+        <div class="value" id="stat-overdue">—</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">⚠ Overdue Keys</div>
+    </div>
+    <div class="table-wrap" id="overdueWrap">
+      <div class="empty-state"><div class="icon">✓</div><p>No overdue keys. All good!</p></div>
+    </div>
+
+    <div style="height: 24px;"></div>
+    <div class="section-header">
+      <div class="section-title">Recent Activity</div>
+    </div>
+    <div class="table-wrap" id="recentWrap">
+      <div class="empty-state"><div class="icon">📋</div><p>No recent activity.</p></div>
+    </div>
+  </div>
+
+  <!-- ── KEYS PAGE ── -->
+  <div id="page-keys" class="page">
+    <div class="section-header">
+      <div class="section-title">Key Registry</div>
+      <button class="btn-add-key" onclick="openAddKeyModal()">+ Add Key</button>
+    </div>
+    <div class="toolbar">
+      <input class="search-input" type="text" id="keySearch" placeholder="Search unit or description..." oninput="renderKeys()">
+    </div>
+    <div class="keys-grid" id="keysGrid">
+      <div class="empty-state"><div class="icon">🔑</div><p>No keys registered yet.</p></div>
+    </div>
+  </div>
+
+  <!-- ── ACTIVE ISSUES PAGE ── -->
+  <div id="page-active" class="page">
+    <div class="section-header">
+      <div class="section-title">Active Issues <span id="activeCount" class="overdue-count" style="display:none"></span></div>
+    </div>
+    <div class="toolbar">
+      <input class="search-input" type="text" id="activeSearch" placeholder="Search by unit, name..." oninput="renderActive()">
+    </div>
+    <div class="table-wrap" id="activeWrap">
+      <div class="empty-state"><div class="icon">✓</div><p>No keys currently issued.</p></div>
+    </div>
+  </div>
+
+  <!-- ── HISTORY PAGE ── -->
+  <div id="page-history" class="page">
+    <div class="section-header">
+      <div class="section-title">Transaction Log</div>
+    </div>
+    <div class="toolbar">
+      <input class="search-input" type="text" id="histSearch" placeholder="Search..." oninput="renderHistory()">
+      <select class="filter-select" id="histFilter" onchange="renderHistory()">
+        <option value="">All Status</option>
+        <option value="OUT">Out</option>
+        <option value="RETURNED">Returned</option>
+      </select>
+    </div>
+    <div class="table-wrap" id="histWrap">
+      <div class="empty-state"><div class="icon">📋</div><p>No transactions yet.</p></div>
+    </div>
+  </div>
+
+  <!-- ── SETUP PAGE ── -->
+  <div id="page-setup" class="page">
+    <div class="setup-card">
+      <h2>Connect to Google Sheets</h2>
+      <p>This system uses Google Apps Script as its backend. All data is stored in your Google Sheet and synced every 10 seconds across all users in real time.</p>
+
+      <div class="gas-steps">
+        <strong>Setup steps:</strong>
+        <ol>
+          <li>Open your Google Sheet (or create a new one in <code>xavier22ramos@gmail.com</code>)</li>
+          <li>Go to <code>Extensions → Apps Script</code></li>
+          <li>Paste the contents of <code>KeyMonitoring_GAS_Backend.js</code> and save</li>
+          <li>Click <code>Deploy → New Deployment → Web App</code></li>
+          <li>Set: <em>Execute as</em> = <strong>Me</strong>, <em>Who has access</em> = <strong>Anyone</strong></li>
+          <li>Copy the <strong>Web App URL</strong> and paste below</li>
+        </ol>
+      </div>
+
+      <div class="form-row">
+        <label>Google Apps Script Web App URL</label>
+        <div class="url-input-wrap">
+          <input type="url" id="gasUrl" placeholder="https://script.google.com/macros/s/..." />
+          <button class="btn-connect" onclick="testConnection()">Test & Save</button>
+        </div>
+      </div>
+      <div class="connection-status" id="connStatus"></div>
+
+      <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--gray-100);">
+        <div class="form-row">
+          <label>Your Name (for audit trail)</label>
+          <input type="text" id="operatorName" placeholder="e.g. Xavier Ramos" />
+        </div>
+        <button class="btn-submit" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── MODALS ── -->
+
+<!-- ISSUE KEY MODAL -->
+<div class="overlay" id="issueModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Issue Key</div>
+      <button class="modal-close" onclick="closeModal('issueModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Unit / Key</label>
+        <input type="text" id="issue-keyLabel" readonly style="background: var(--gray-50);">
+        <input type="hidden" id="issue-keyId">
+        <input type="hidden" id="issue-unitNumber">
+        <input type="hidden" id="issue-keyDesc">
+      </div>
+      <div class="form-row">
+        <label>Issued To <span style="color:var(--red)">*</span></label>
+        <input type="text" id="issue-issuedTo" placeholder="Full name of recipient">
+      </div>
+      <div class="form-row">
+        <label>Purpose</label>
+        <input type="text" id="issue-purpose" placeholder="e.g. Site delivery, Maintenance">
+      </div>
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>Expected Return</label>
+          <input type="datetime-local" id="issue-expectedReturn">
+        </div>
+        <div class="form-row">
+          <label>Issued By</label>
+          <input type="text" id="issue-issuedBy" placeholder="Your name">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Remarks</label>
+        <textarea id="issue-remarks" placeholder="Optional notes..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('issueModal')">Cancel</button>
+      <button class="btn-submit" id="btnIssueSubmit" onclick="submitIssueKey()">Issue Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- RETURN KEY MODAL -->
+<div class="overlay" id="returnModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Return Key</div>
+      <button class="modal-close" onclick="closeModal('returnModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Key / Unit</label>
+        <input type="text" id="return-keyLabel" readonly style="background: var(--gray-50);">
+        <input type="hidden" id="return-logId">
+      </div>
+      <div class="form-row">
+        <label>Issued To</label>
+        <input type="text" id="return-issuedTo" readonly style="background: var(--gray-50);">
+      </div>
+      <div class="form-row">
+        <label>Returned By <span style="color:var(--red)">*</span></label>
+        <input type="text" id="return-returnedBy" placeholder="Your name">
+      </div>
+      <div class="form-row">
+        <label>Remarks</label>
+        <textarea id="return-remarks" placeholder="Optional notes..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('returnModal')">Cancel</button>
+      <button class="btn-submit" id="btnReturnSubmit" onclick="submitReturnKey()">Confirm Return</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD KEY MODAL -->
+<div class="overlay" id="addKeyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add New Key</div>
+      <button class="modal-close" onclick="closeModal('addKeyModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Unit Number <span style="color:var(--red)">*</span></label>
+        <input type="text" id="addkey-unit" placeholder="e.g. HWO-001, TRK-045">
+      </div>
+      <div class="form-row">
+        <label>Key Description <span style="color:var(--red)">*</span></label>
+        <input type="text" id="addkey-desc" placeholder="e.g. Ignition Key, Cabinet Key">
+      </div>
+      <div class="form-row">
+        <label>Number of Copies</label>
+        <input type="number" id="addkey-copies" min="1" value="1">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('addKeyModal')">Cancel</button>
+      <button class="btn-submit" id="btnAddKeySubmit" onclick="submitAddKey()">Add Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  BB MOTORPOOL — KEY MONITORING SYSTEM v2.0
+//  Frontend App Logic
+// ══════════════════════════════════════════════════════════
+
+let GAS_URL = localStorage.getItem('kms_gas_url') || 'https://script.google.com/macros/s/AKfycbzCzcTnPJtyRbNTTRwdV4FziyLn7Fk1INkE_PcXonnTPumxIqk-3MFHp2y94OtRzhBaGA/exec';
+let OPERATOR = localStorage.getItem('kms_operator') || '';
+let allData = { keys: [], logs: [] };
+let syncInterval = null;
+
+// ── INIT ──────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (GAS_URL) {
+    document.getElementById('gasUrl').value = GAS_URL;
+  }
+  if (OPERATOR) {
+    document.getElementById('operatorName').value = OPERATOR;
+    document.getElementById('issue-issuedBy').value = OPERATOR;
+    document.getElementById('return-returnedBy').value = OPERATOR;
+  }
+
+  setupTabs();
+  startSync();
+});
+
+// ── TABS ──────────────────────────────────────────────────
+
+function setupTabs() {
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('page-' + tab.dataset.page).classList.add('active');
+    });
+  });
+}
+
+// ── SYNC ──────────────────────────────────────────────────
+
+function startSync() {
+  fetchData();
+  syncInterval = setInterval(fetchData, 10000);
+}
+
+async function fetchData() {
+  if (!GAS_URL) {
+    setSyncStatus('no-url');
+    return;
+  }
+
+  setSyncStatus('syncing');
+  try {
+    const res = await fetch(GAS_URL + '?action=getAll&t=' + Date.now());
+    const json = await res.json();
+    if (json.success) {
+      allData = json;
+      renderAll();
+      setSyncStatus('ok', json.timestamp);
+    } else {
+      setSyncStatus('error');
+    }
+  } catch (e) {
+    setSyncStatus('error');
+  }
+}
+
+function setSyncStatus(state, ts) {
+  const dot = document.getElementById('syncDot');
+  const text = document.getElementById('syncText');
+  dot.className = 'sync-dot';
+  if (state === 'ok') {
+    text.textContent = 'Live · ' + (ts ? new Date(ts).toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '');
+  } else if (state === 'syncing') {
+    dot.classList.add('syncing');
+    text.textContent = 'Syncing...';
+  } else if (state === 'error') {
+    dot.classList.add('error');
+    text.textContent = 'Sync error';
+  } else {
+    dot.classList.add('error');
+    text.textContent = 'Not connected';
+  }
+}
+
+// ── RENDER ALL ────────────────────────────────────────────
+
+function renderAll() {
+  renderDashboard();
+  renderKeys();
+  renderActive();
+  renderHistory();
+  checkAlerts();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────
+
+function renderDashboard() {
+  const { keys, logs } = allData;
+  const outLogs = logs.filter(l => l.Status === 'OUT');
+  const now = new Date();
+  const overdueLogs = outLogs.filter(l => l.ExpectedReturn && new Date(l.ExpectedReturn) < now);
+
+  const totalCopies = keys.reduce((s, k) => s + (parseInt(k.TotalCopies) || 1), 0);
+  const totalOut = outLogs.length;
+  const totalAvail = keys.reduce((s, k) => s + (parseInt(k.Available) || 0), 0);
+
+  document.getElementById('stat-total').textContent = totalCopies;
+  document.getElementById('stat-available').textContent = totalAvail;
+  document.getElementById('stat-out').textContent = totalOut;
+  document.getElementById('stat-overdue').textContent = overdueLogs.length;
+
+  // Overdue table
+  renderLogTable('overdueWrap', overdueLogs.slice(0, 10), true, false);
+
+  // Recent activity (last 10)
+  const recent = [...logs].reverse().slice(0, 10);
+  renderLogTable('recentWrap', recent, false, false);
+}
+
+// ── KEYS ──────────────────────────────────────────────────
+
+function renderKeys() {
+  const q = (document.getElementById('keySearch').value || '').toLowerCase();
+  const grid = document.getElementById('keysGrid');
+  let keys = allData.keys;
+  if (q) keys = keys.filter(k =>
+    k.UnitNumber.toLowerCase().includes(q) || k.KeyDescription.toLowerCase().includes(q)
+  );
+
+  if (!keys.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="icon">🔑</div><p>No keys found.</p></div>';
+    return;
+  }
+
+  grid.innerHTML = keys.map(k => {
+    const total = parseInt(k.TotalCopies) || 1;
+    const avail = parseInt(k.Available) || 0;
+    const out = parseInt(k.Out) || 0;
+    let badgeClass = 'available', badgeText = 'Available';
+    if (avail === 0) { badgeClass = 'out'; badgeText = 'All Out'; }
+    else if (out > 0) { badgeClass = 'partial'; badgeText = out + ' Out'; }
+
+    return `
+    <div class="key-card">
+      <div class="key-card-header">
+        <div>
+          <div class="key-unit">${esc(k.UnitNumber)}</div>
+          <div class="key-desc">${esc(k.KeyDescription)}</div>
+        </div>
+        <span class="avail-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="key-card-body">
+        <div class="key-copies">
+          Copies: <strong>${avail} available</strong> / ${total} total
+        </div>
+        <div class="key-actions">
+          <button class="btn-issue" ${avail === 0 ? 'disabled' : ''}
+            onclick="openIssueModal('${esc(k.KeyID)}','${esc(k.UnitNumber)}','${esc(k.KeyDescription)}')">
+            Issue Key
+          </button>
+          <button class="btn-view" onclick="viewKeyLogs('${esc(k.KeyID)}')">History</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── ACTIVE ────────────────────────────────────────────────
+
+function renderActive() {
+  const q = (document.getElementById('activeSearch').value || '').toLowerCase();
+  const now = new Date();
+  let logs = allData.logs.filter(l => l.Status === 'OUT');
+  if (q) logs = logs.filter(l =>
+    l.UnitNumber.toLowerCase().includes(q) ||
+    l.IssuedTo.toLowerCase().includes(q) ||
+    l.KeyDescription.toLowerCase().includes(q)
+  );
+
+  const count = document.getElementById('activeCount');
+  if (logs.length > 0) { count.textContent = logs.length; count.style.display = ''; }
+  else { count.style.display = 'none'; }
+
+  const wrap = document.getElementById('activeWrap');
+  if (!logs.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">✓</div><p>No keys currently issued.</p></div>';
+    return;
+  }
+
+  const rows = logs.map(l => {
+    const isOverdue = l.ExpectedReturn && new Date(l.ExpectedReturn) < now;
+    return `
+    <tr>
+      <td><strong>${esc(l.UnitNumber)}</strong><br><span style="font-size:11px;color:var(--gray-400)">${esc(l.KeyDescription)}</span></td>
+      <td>${esc(l.IssuedTo)}</td>
+      <td>${esc(l.Purpose || '—')}</td>
+      <td>${fmtDate(l.DateIssued)}</td>
+      <td>${l.ExpectedReturn ? fmtDate(l.ExpectedReturn) : '—'}</td>
+      <td>${isOverdue
+        ? '<span class="status-pill overdue">Overdue</span>'
+        : '<span class="status-pill out">Out</span>'}</td>
+      <td>
+        <button class="btn-return" onclick="openReturnModal('${esc(l.LogID)}','${esc(l.UnitNumber)} – ${esc(l.KeyDescription)}','${esc(l.IssuedTo)}')">
+          Return
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>Unit / Key</th><th>Issued To</th><th>Purpose</th>
+      <th>Date Issued</th><th>Exp. Return</th><th>Status</th><th>Action</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ── HISTORY ───────────────────────────────────────────────
+
+function renderHistory() {
+  const q = (document.getElementById('histSearch').value || '').toLowerCase();
+  const f = document.getElementById('histFilter').value;
+  let logs = [...allData.logs].reverse();
+  if (f) logs = logs.filter(l => l.Status === f);
+  if (q) logs = logs.filter(l =>
+    l.UnitNumber.toLowerCase().includes(q) ||
+    l.IssuedTo.toLowerCase().includes(q) ||
+    l.KeyDescription.toLowerCase().includes(q) ||
+    (l.IssuedBy || '').toLowerCase().includes(q)
+  );
+
+  renderLogTable('histWrap', logs, false, true);
+}
+
+function renderLogTable(wrapperId, logs, showReturn, showReturnCol) {
+  const wrap = document.getElementById(wrapperId);
+  if (!logs.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>No records found.</p></div>';
+    return;
+  }
+  const now = new Date();
+  const rows = logs.map(l => {
+    const isOverdue = l.Status === 'OUT' && l.ExpectedReturn && new Date(l.ExpectedReturn) < now;
+    const statusPill = isOverdue
+      ? '<span class="status-pill overdue">Overdue</span>'
+      : l.Status === 'OUT'
+        ? '<span class="status-pill out">Out</span>'
+        : '<span class="status-pill returned">Returned</span>';
+
+    const returnCol = showReturn
+      ? `<td><button class="btn-return" onclick="openReturnModal('${esc(l.LogID)}','${esc(l.UnitNumber)} – ${esc(l.KeyDescription)}','${esc(l.IssuedTo)}')">Return</button></td>`
+      : showReturnCol
+        ? `<td>${l.DateReturned ? fmtDate(l.DateReturned) : '—'}</td>`
+        : '';
+
+    return `<tr>
+      <td><strong>${esc(l.UnitNumber)}</strong><br><span style="font-size:11px;color:var(--gray-400)">${esc(l.KeyDescription)}</span></td>
+      <td>${esc(l.IssuedTo)}</td>
+      <td>${esc(l.IssuedBy || '—')}</td>
+      <td>${fmtDate(l.DateIssued)}</td>
+      <td>${l.ExpectedReturn ? fmtDate(l.ExpectedReturn) : '—'}</td>
+      <td>${statusPill}</td>
+      ${returnCol}
+    </tr>`;
+  }).join('');
+
+  const returnHeader = showReturn ? '<th>Action</th>' : showReturnCol ? '<th>Date Returned</th>' : '';
+
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>Unit / Key</th><th>Issued To</th><th>Issued By</th>
+      <th>Date Issued</th><th>Exp. Return</th><th>Status</th>${returnHeader}
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ── ALERTS ────────────────────────────────────────────────
+
+function checkAlerts() {
+  const now = new Date();
+  const overdue = allData.logs.filter(l =>
+    l.Status === 'OUT' && l.ExpectedReturn && new Date(l.ExpectedReturn) < now
+  );
+  const bar = document.getElementById('alertBar');
+  if (overdue.length > 0) {
+    document.getElementById('alertText').textContent =
+      `${overdue.length} key${overdue.length > 1 ? 's are' : ' is'} overdue for return — please follow up immediately.`;
+    bar.classList.remove('hidden');
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
+// ── VIEW KEY LOGS ─────────────────────────────────────────
+
+function viewKeyLogs(keyId) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-page="history"]').classList.add('active');
+  document.getElementById('page-history').classList.add('active');
+  document.getElementById('histSearch').value = '';
+  document.getElementById('histFilter').value = '';
+  renderHistory();
+}
+
+// ── ISSUE KEY MODAL ───────────────────────────────────────
+
+function openIssueModal(keyId, unit, desc) {
+  document.getElementById('issue-keyLabel').value = unit + ' — ' + desc;
+  document.getElementById('issue-keyId').value = keyId;
+  document.getElementById('issue-unitNumber').value = unit;
+  document.getElementById('issue-keyDesc').value = desc;
+  document.getElementById('issue-issuedTo').value = '';
+  document.getElementById('issue-purpose').value = '';
+  document.getElementById('issue-remarks').value = '';
+  document.getElementById('issue-issuedBy').value = OPERATOR;
+
+  // Default expected return = tomorrow same time
+  const tom = new Date(); tom.setDate(tom.getDate() + 1);
+  document.getElementById('issue-expectedReturn').value = toLocalDatetimeInput(tom);
+
+  openModal('issueModal');
+}
+
+async function submitIssueKey() {
+  const issuedTo = document.getElementById('issue-issuedTo').value.trim();
+  if (!issuedTo) { toast('Please enter who the key is issued to.', 'error'); return; }
+
+  const payload = {
+    action: 'issueKey',
+    keyId: document.getElementById('issue-keyId').value,
+    unitNumber: document.getElementById('issue-unitNumber').value,
+    keyDescription: document.getElementById('issue-keyDesc').value,
+    issuedTo,
+    issuedBy: document.getElementById('issue-issuedBy').value.trim() || OPERATOR,
+    purpose: document.getElementById('issue-purpose').value.trim(),
+    expectedReturn: document.getElementById('issue-expectedReturn').value,
+    remarks: document.getElementById('issue-remarks').value.trim()
+  };
+
+  await callGAS(payload, 'btnIssueSubmit', 'issueModal', 'Key issued successfully!');
+}
+
+// ── RETURN KEY MODAL ──────────────────────────────────────
+
+function openReturnModal(logId, keyLabel, issuedTo) {
+  document.getElementById('return-logId').value = logId;
+  document.getElementById('return-keyLabel').value = keyLabel;
+  document.getElementById('return-issuedTo').value = issuedTo;
+  document.getElementById('return-returnedBy').value = OPERATOR;
+  document.getElementById('return-remarks').value = '';
+  openModal('returnModal');
+}
+
+async function submitReturnKey() {
+  const returnedBy = document.getElementById('return-returnedBy').value.trim();
+  if (!returnedBy) { toast('Please enter who returned the key.', 'error'); return; }
+
+  const payload = {
+    action: 'returnKey',
+    logId: document.getElementById('return-logId').value,
+    returnedBy,
+    remarks: document.getElementById('return-remarks').value.trim()
+  };
+
+  await callGAS(payload, 'btnReturnSubmit', 'returnModal', 'Key returned successfully!');
+}
+
+// ── ADD KEY MODAL ─────────────────────────────────────────
+
+function openAddKeyModal() {
+  document.getElementById('addkey-unit').value = '';
+  document.getElementById('addkey-desc').value = '';
+  document.getElementById('addkey-copies').value = '1';
+  openModal('addKeyModal');
+}
+
+async function submitAddKey() {
+  const unit = document.getElementById('addkey-unit').value.trim();
+  const desc = document.getElementById('addkey-desc').value.trim();
+  if (!unit || !desc) { toast('Unit number and description are required.', 'error'); return; }
+
+  const payload = {
+    action: 'addKey',
+    unitNumber: unit,
+    keyDescription: desc,
+    totalCopies: parseInt(document.getElementById('addkey-copies').value) || 1
+  };
+
+  await callGAS(payload, 'btnAddKeySubmit', 'addKeyModal', 'Key added successfully!');
+}
+
+// ── GAS CALL ──────────────────────────────────────────────
+
+async function callGAS(payload, btnId, modalId, successMsg) {
+  if (!GAS_URL) {
+    toast('Not connected. Please configure the Google Apps Script URL in Setup.', 'error');
+    return;
+  }
+  const btn = document.getElementById(btnId);
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (json.success) {
+      closeModal(modalId);
+      toast(successMsg, 'success');
+      await fetchData();
+    } else {
+      toast('Error: ' + (json.error || 'Unknown error'), 'error');
+    }
+  } catch (e) {
+    toast('Network error. Please try again.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = btnId === 'btnIssueSubmit' ? 'Issue Key'
+      : btnId === 'btnReturnSubmit' ? 'Confirm Return' : 'Add Key';
+  }
+}
+
+// ── SETUP ─────────────────────────────────────────────────
+
+async function testConnection() {
+  const url = document.getElementById('gasUrl').value.trim();
+  if (!url) { toast('Please enter the Web App URL first.', 'error'); return; }
+
+  const status = document.getElementById('connStatus');
+  status.className = 'connection-status';
+  status.textContent = 'Testing connection...';
+  status.style.display = 'block';
+
+  try {
+    const res = await fetch(url + '?action=getAll&t=' + Date.now());
+    const json = await res.json();
+    if (json.success) {
+      status.className = 'connection-status ok';
+      status.textContent = '✓ Connected! Found ' + json.keys.length + ' keys and ' + json.logs.length + ' log entries.';
+      localStorage.setItem('kms_gas_url', url);
+      GAS_URL = url;
+      fetchData();
+    } else {
+      status.className = 'connection-status err';
+      status.textContent = '✗ Connected but received an error: ' + json.error;
+    }
+  } catch (e) {
+    status.className = 'connection-status err';
+    status.textContent = '✗ Could not connect. Check the URL and make sure the Web App is deployed as "Anyone".';
+  }
+}
+
+function saveSettings() {
+  const url = document.getElementById('gasUrl').value.trim();
+  const op = document.getElementById('operatorName').value.trim();
+  if (url) { localStorage.setItem('kms_gas_url', url); GAS_URL = url; }
+  if (op) { localStorage.setItem('kms_operator', op); OPERATOR = op; }
+  toast('Settings saved!', 'success');
+  if (GAS_URL) fetchData();
+}
+
+// ── MODAL HELPERS ─────────────────────────────────────────
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Close modals on backdrop click
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => {
+    if (e.target === o) o.classList.remove('open');
+  });
+});
+
+// ── TOAST ─────────────────────────────────────────────────
+
+function toast(msg, type = '') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── UTILITIES ─────────────────────────────────────────────
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+function fmtDate(str) {
+  if (!str) return '—';
+  const d = new Date(str);
+  if (isNaN(d)) return str;
+  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+    + ' ' + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+}
+
+function toLocalDatetimeInput(date) {
+  const pad = n => String(n).padStart(2,'0');
+  return date.getFullYear() + '-' + pad(date.getMonth()+1) + '-' + pad(date.getDate())
+    + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+}
+</script>
+</body>
+</html>
